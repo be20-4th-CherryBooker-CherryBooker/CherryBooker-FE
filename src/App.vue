@@ -13,6 +13,17 @@ import NavigationBar from "@/components/NavigationBar.vue";
 </template>
 
 <style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: #FFFAEE;
+}
+
 .app-container {
   font-family: "Pretendard", sans-serif;
 }
