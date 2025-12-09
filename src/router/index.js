@@ -5,6 +5,11 @@ const routes = [
         path: "/quotes",
         name: "quotes",
         component: () => import("../views/quote/QuotesView.vue")
+    },
+    {
+        path: "/thread",
+        name: "thread",
+        component: () => import("@/views/thread/ThreadView.vue"),
     }
 ];
 

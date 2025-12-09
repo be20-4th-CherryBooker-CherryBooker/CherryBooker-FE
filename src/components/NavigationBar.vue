@@ -28,8 +28,8 @@
     </div>
 
     <div class="nav-item"
-         :class="{ active: isActive('/menu') }"
-         @click="goTo('/menu')">
+         :class="{ active: isActive('/thread') }"
+         @click="goTo('/thread')">
       <img src="/images/thread.png" alt="menu" />
     </div>
   </nav>
