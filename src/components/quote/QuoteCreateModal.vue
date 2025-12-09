@@ -116,21 +116,21 @@ const requestOCR = async () => {
   if (!imageFile.value) return alert("이미지를 먼저 업로드하세요.");
 
   const formData = new FormData();
-  formData.append("image", imageFile.value);
+  formData.append("file", imageFile.value);
 
   try {
     const res = await axios.post("http://localhost:8000/ocr", formData, {
       headers: { "Content-Type": "multipart/form-data" }
     });
 
-    content.value = res.data.text; // OCR로 인식된 글귀
+    content.value = res.data.full_text; // OCR로 인식된 글귀
   } catch (e) {
     console.error(e);
     alert("OCR 처리 중 오류 발생");
   }
 };
 
-// 4) 글귀 등록 API
+// 4) 글귀 등록 API + 이미지 업로드 연동
 const submitQuote = async () => {
   if (!selectedBookId.value) return alert("도서를 선택해주세요.");
   if (!content.value.trim()) return alert("글귀 내용을 입력해주세요.");
@@ -138,10 +138,25 @@ const submitQuote = async () => {
   submitLoading.value = true;
 
   try {
+    let uploadedPath = null;
+
+    // ✔ 이미지 파일이 있으면 백엔드에 업로드
+    if (imageFile.value) {
+      const formData = new FormData();
+      formData.append("file", imageFile.value);
+
+      const uploadRes = await axios.post("/api/files/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+
+      uploadedPath = uploadRes.data.filePath; // → FileUploadController가 반환하는 경로
+    }
+
+    // ✔ 글귀 등록 API 호출
     const body = {
       userBookId: selectedBookId.value,
       content: content.value,
-      imagePath: null // 이미지 저장 서버 구축 시 변경 가능
+      imagePath: uploadedPath // 업로드 성공 시 실제 이미지 경로 저장
     };
 
     await axios.post("/api/quotes", body);
@@ -149,6 +164,7 @@ const submitQuote = async () => {
     alert("글귀가 등록되었습니다!");
     emit("created");
     emit("close");
+
   } catch (e) {
     console.error(e);
     alert("등록 중 오류가 발생했습니다.");
@@ -163,7 +179,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 🔥 모달 전체 스타일 */
+/* 모달 전체 스타일 */
 .modal-overlay {
   position: fixed;
   top: 0;
