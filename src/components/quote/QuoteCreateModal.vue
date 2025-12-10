@@ -212,11 +212,15 @@ const submitQuote = async () => {
     }
 
     // 글귀 등록 요청
+    const selectedBook = books.value.find(b => b.userBookId === selectedBookId.value);
+
     const body = {
-      userId,                        // ⭐ userId 포함
+      userId,
       userBookId: selectedBookId.value,
       content: content.value,
-      imagePath: uploadedPath
+      imagePath: uploadedPath,
+      bookTitle: selectedBook.bookTitle,
+      author: selectedBook.author
     };
 
     const quoteRes = await axios.post("/api/quotes", body, {
