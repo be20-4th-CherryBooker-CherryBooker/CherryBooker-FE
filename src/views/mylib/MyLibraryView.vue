@@ -65,6 +65,12 @@
       :direction="arrowDirection"
       @click="handleArrowClick"
     />
+
+    <AddBookModal
+      :show="showAddModal"
+      @close="showAddModal = false"
+      @added="handleBookAdded"
+    />
   </div>
 </template>
 
@@ -73,10 +79,17 @@ import { ref, onMounted, onBeforeUnmount, computed } from "vue";
 import axios from "axios";
 import BookCard from "@/components/mylib/BookCard.vue";
 import AddBookCard from "@/components/mylib/AddBookCard.vue";
+import AddBookModal from "@/components/mylib/AddBookModal.vue";
 import ScrollArrow from "@/components/mylib/ScrollArrow.vue";
 
 const PAGE_SIZE = 8;
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
+const FALLBACK_USER_ID = import.meta.env.VITE_MYLIB_USER_ID ?? null;
+if (!FALLBACK_USER_ID) {
+  console.warn(
+    "[MyLib] No VITE_MYLIB_USER_ID provided. Backend requests require authentication."
+  );
+}
 
 const filterOptions = [
   { label: "전체", value: null },
@@ -94,12 +107,21 @@ const isLoading = ref(false);
 const errorMessage = ref("");
 const infoMessage = ref("");
 const completingBookId = ref(null);
+const showAddModal = ref(false);
 
 const infiniteTarget = ref(null);
 let observer;
 
 const isAtBottom = ref(false);
 const arrowDirection = computed(() => (isAtBottom.value ? "up" : "down"));
+
+const parseApiResponse = (response) => {
+  const body = response?.data ?? response;
+  if (body?.success === false) {
+    throw new Error(body?.message || "서버에서 오류가 발생했습니다.");
+  }
+  return body?.data ?? body;
+};
 
 const loadBooks = async ({ reset = false } = {}) => {
   if (isLoading.value || (!hasMore.value && !reset)) return;
@@ -117,6 +139,7 @@ const loadBooks = async ({ reset = false } = {}) => {
   try {
     const response = await axios.get(`${API_BASE_URL}/mylib/books`, {
       params: {
+        userId: FALLBACK_USER_ID || undefined,
         keyword: keyword.value || undefined,
         status: selectedStatus.value || undefined,
         page: page.value,
@@ -125,7 +148,7 @@ const loadBooks = async ({ reset = false } = {}) => {
       withCredentials: true,
     });
 
-    const payload = response.data?.data;
+    const payload = parseApiResponse(response);
     if (!payload) throw new Error("응답 데이터가 비어 있습니다.");
 
     infoMessage.value = payload.notice || "";
@@ -159,7 +182,12 @@ const changeFilter = (status) => {
 };
 
 const openAddBookModal = () => {
-  console.log("책 추가 모달을 연결해주세요.");
+  showAddModal.value = true;
+};
+
+const handleBookAdded = () => {
+  showAddModal.value = false;
+  loadBooks({ reset: true });
 };
 
 const openBookDetail = (book) => {
@@ -175,9 +203,9 @@ const markAsRead = async (book) => {
 
   try {
     await axios.patch(
-        `${API_BASE_URL}/mylib/books/${book.myLibId}/status`,
-        { targetStatus: "READ" },
-        { withCredentials: true }
+      `${API_BASE_URL}/mylib/books/${book.myLibId}/status`,
+      { targetStatus: "READ" },
+      { withCredentials: true }
     );
 
     books.value = books.value.map((item) =>
