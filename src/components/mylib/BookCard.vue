@@ -2,15 +2,15 @@
   <div class="book-card" @click="$emit('select', book)">
     <div class="cover-wrapper" :class="{ spine: book.displayType === 'SPINE' }">
       <img
-        :src="resolvedCover"
-        :alt="book.title"
-        class="book-cover"
-        @error="handleImageError"
+          :src="resolvedCover"
+          :alt="book.title"
+          class="book-cover"
+          @error="handleImageError"
       />
 
       <div
-        v-if="book.status"
-        class="status-pill"
+          v-if="book.status"
+          class="status-pill"
         :class="book.status.toLowerCase()"
       >
         {{ statusLabel }}
@@ -19,6 +19,15 @@
       <div v-if="book.badgeIssued" class="badge-check">
         ✓
       </div>
+
+      <button
+          v-if="book.status === 'READING'"
+          class="complete-btn"
+          :disabled="completing"
+          @click.stop="$emit('complete', book)"
+      >
+        {{ completing ? "변경 중..." : "완독" }}
+      </button>
     </div>
 
     <div class="book-title">{{ book.title }}</div>
@@ -34,9 +43,13 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  completing: {
+    type: Boolean,
+    default: false
+  }
 });
 
-defineEmits(["select"]);
+defineEmits(["select", "complete"]);
 
 const fallbackCover = "/images/default-book.png";
 const currentCover = ref(props.book.coverImageUrl || fallbackCover);
@@ -138,6 +151,33 @@ const handleImageError = () => {
   align-items: center;
   justify-content: center;
   font-weight: 700;
+}
+
+.complete-btn {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translate(-50%, 0);
+  padding: 8px 20px;
+  border-radius: 20px;
+  border: none;
+  background: rgba(28, 28, 28, 0.92);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.book-card:hover .complete-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.book-card:hover .status-pill.reading {
+  opacity: 0;
 }
 
 .book-title {

@@ -34,7 +34,9 @@
         v-for="book in books"
         :key="book.myLibId"
         :book="book"
+        :completing="completingBookId === book.myLibId"
         @select="openBookDetail"
+        @complete="markAsRead"
       />
     </div>
 
@@ -91,6 +93,7 @@ const hasMore = ref(true);
 const isLoading = ref(false);
 const errorMessage = ref("");
 const infoMessage = ref("");
+const completingBookId = ref(null);
 
 const infiniteTarget = ref(null);
 let observer;
@@ -161,6 +164,41 @@ const openAddBookModal = () => {
 
 const openBookDetail = (book) => {
   console.log("선택된 도서:", book);
+};
+
+const markAsRead = async (book) => {
+  if (book.status !== "READING" || completingBookId.value) {
+    return;
+  }
+
+  completingBookId.value = book.myLibId;
+
+  try {
+    await axios.patch(
+        `${API_BASE_URL}/mylib/books/${book.myLibId}/status`,
+        { targetStatus: "READ" },
+        { withCredentials: true }
+    );
+
+    books.value = books.value.map((item) =>
+        item.myLibId === book.myLibId
+            ? {
+              ...item,
+              status: "READ",
+              badgeIssued: true,
+              displayType: "SPINE",
+            }
+            : item
+    );
+  } catch (error) {
+    console.error(error);
+    alert(
+        error.response?.data?.message ||
+        "책 상태를 변경하는 중 오류가 발생했습니다."
+    );
+  } finally {
+    completingBookId.value = null;
+  }
 };
 
 const handleArrowClick = () => {
