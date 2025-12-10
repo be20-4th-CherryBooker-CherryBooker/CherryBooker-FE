@@ -100,9 +100,21 @@ const loadQuotes = async () => {
 
   isLoading.value = true;
 
-  const res = await fetch(`/api/quotes/my?page=${page.value}&size=${size}&keyword=${keyword.value || ""}`);
-  const data = await res.json();
+  const token = localStorage.getItem("accessToken");
 
+  const res = await fetch(`/api/quotes/my?page=${page.value}&size=${size}&keyword=${keyword.value || ""}`, {
+    headers: {
+      "Authorization": `Bearer ${token}`
+    }
+
+  });
+
+  if (!res.ok) {
+    console.error("API 호출 실패 상태:", res.status);
+    return;
+  }
+
+  const data = await res.json();
   quotes.value.push(...data.content);
   isLast.value = data.last;
 
