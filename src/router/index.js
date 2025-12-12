@@ -55,6 +55,44 @@ const routes = [
         name: "threadDetail",
         component: () => import("@/views/thread/ThreadDetailView.vue"),
     },
+
+    {
+        path: '/admin',
+        meta: { role: 'admin' },
+        children: [
+            {
+                path: 'alarms',
+                name: 'AdminAlarmTemplates',
+                component: () => import('@/views/notification/AlarmTemplateList.vue'),
+            },
+            {
+                path: 'alarms/new',
+                name: 'AdminAlarmTemplateCreate',
+                component: () => import('@/views/notification/AlarmTemplateCreate.vue'),
+            },
+            {
+                path: 'alarms/:templateId/edit',
+                name: 'AdminAlarmTemplateEdit',
+                component: () => import('@/views/notification/AlarmTemplateEdit.vue'),
+            },
+            {
+                path: 'alarms/:templateId',
+                name: 'AdminAlarmTemplateDetail',
+                component: () => import('@/views/notification/AlarmTemplateDetail.vue'),
+            },
+            {
+                path: 'alarms/send',
+                name: 'AdminAlarmSendList',
+                component: () => import('@/views/notification/AlarmSendList.vue'),
+            },
+            {
+                path: 'alarms/send/create',
+                name: 'AdminAlarmSendCreate',
+                component: () => import('@/views/notification/AlarmSendCreate.vue'),
+            },
+        ],
+    }
+
 ];
 
 const router = createRouter({

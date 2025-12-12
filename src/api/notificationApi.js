@@ -1,29 +1,33 @@
 // src/api/notificationApi.js
-import apiClient from '@/api/httpClient'
-import { useAuthStore } from '@/stores/authStore'
+import axios from 'axios'
+import { useAuthStore } from '@/stores/AuthStore'
 
-// 공통 헬퍼 함수
-async function getCurrentUserId() {
+const apiClient = axios.create({
+    baseURL: '/api',
+    withCredentials: true,
+})
+
+// JWT 붙이기
+apiClient.interceptors.request.use((config) => {
     const authStore = useAuthStore()
 
-    // 로그인 안 되어 있으면 바로 에러
-    if (!authStore.isAuthenticated) {
-        throw new Error('[notificationApi] 로그인 상태가 아닙니다.')
+    // 새로고침 직후 대비
+    if (!authStore.accessToken && typeof authStore.loadFromStorage === 'function') {
+        authStore.loadFromStorage()
     }
 
-    // authStore.ensureUserId()가 필요하면 /auth/me 부르면서 userId 채워줌
-    const userId = await authStore.ensureUserId()
-
-    if (!userId) {
-        throw new Error('[notificationApi] 현재 로그인 유저의 userId가 없습니다.')
+    const token = authStore.accessToken
+    if (token) {
+        config.headers = config.headers || {}
+        config.headers.Authorization = `Bearer ${token}`
     }
 
-    return userId
-}
+    return config
+})
 
-/**
- * 관리자 템플릿 목록/검색 조회
- */
+/* ===================== 관리자 템플릿 관리 ===================== */
+
+// 템플릿 목록/검색 조회
 export async function fetchAdminNotificationTemplates({
                                                           keyword = '',
                                                           page = 0,
@@ -36,162 +40,112 @@ export async function fetchAdminNotificationTemplates({
             size,
         },
     })
-
+    // data: { templates: [...], pagination: {...} }
     return res.data?.data
 }
 
-/**
- * 관리자 템플릿 생성
- */
+// 템플릿 생성
 export async function createAdminNotificationTemplate({
-                                                          templateKind = 'NORMAL',
-                                                          templateTitle,
-                                                          templateBody,
+                                                          templateType = 'SYSTEM', // 기본값: 시스템 공지
+                                                          title,
+                                                          body,
                                                       }) {
     const res = await apiClient.post('/admin/notifications/templates', {
-        templateKind,
-        templateTitle,
-        templateBody,
+        templateType,
+        title,
+        body,
     })
 
     return res.data?.data
 }
 
-/**
- * 관리자 템플릿 수정
- */
+// 템플릿 수정
 export async function updateAdminNotificationTemplate(
     templateId,
-    { templateKind = 'NORMAL', templateTitle, templateBody },
+    { templateType = 'SYSTEM', title, body },
 ) {
     const res = await apiClient.put(`/admin/notifications/templates/${templateId}`, {
-        templateKind,
-        templateTitle,
-        templateBody,
+        templateType,
+        title,
+        body,
     })
 
     return res.data?.data
 }
 
-/**
- * 관리자 템플릿 삭제
- */
+// 템플릿 삭제
 export async function deleteAdminNotificationTemplate(templateId) {
     const res = await apiClient.delete(`/admin/notifications/templates/${templateId}`)
     return res.data
 }
 
-/**
- * 관리자용 알림 발송 내역 조회
- */
-export async function fetchAdminNotificationHistory({
-                                                        page = 0,
-                                                        size = 10,
-                                                    } = {}) {
-    const res = await apiClient.get('/admin/notifications', {
+/* ===================== 관리자 발송/발송 로그 ===================== */
+
+// 템플릿 기반 알림 발송 (즉시, 단일 사용자)
+export async function sendNotificationByTemplate(templateId, { targetUserId, variables = {} }) {
+    const res = await apiClient.post(
+        `/admin/notifications/templates/${templateId}/send`,
+        {
+            targetUserId,
+            variables,
+        },
+    )
+
+    // data: { notificationId }
+    return res.data?.data
+}
+
+// 발송 로그 조회
+export async function fetchAdminNotificationSendLogs({
+                                                         page = 0,
+                                                         size = 10,
+                                                     } = {}) {
+    const res = await apiClient.get('/admin/notifications/send-logs', {
         params: { page, size },
     })
 
-    return res.data.data
+    // data: { logs: [...], pagination: {...} }
+    return res.data?.data
 }
 
-/**
- * 관리자 알림 발송(즉시)
- */
-export async function sendAdminNotificationNow(templateId, request) {
-    const res = await apiClient.post(
-        `/admin/notifications/${templateId}/send`,
-        request,
-    )
-
-    return res.data.data
-}
-
-/**
- * 관리자 알림 발송(예약)
- */
-export async function reserveAdminNotification(templateId, request) {
-    const res = await apiClient.post(
-        `/admin/notifications/${templateId}/reserve`,
-        request,
-    )
-
-    return res.data.data
-}
-
-/* ===================== 유저용 알림 API ===================== */
+/* ===================== 사용자 알림함 ===================== */
 
 // 내 알림 목록 조회
 export async function fetchMyNotifications({ page = 0, size = 10 } = {}) {
-    const userId = await getCurrentUserId()
-
-    const res = await apiClient.get(`/users/${userId}/notifications`, {
+    const res = await apiClient.get('/notifications/me', {
         params: { page, size },
     })
-    return res.data.data
+    // data: { notifications: [...], pagination: {...} }
+    return res.data?.data
 }
 
 // 내 미읽음 개수 조회
 export async function fetchMyUnreadCount() {
-    const userId = await getCurrentUserId()
-
-    const res = await apiClient.get(`/users/${userId}/notifications/unread-count`)
-    return res.data.data
+    const res = await apiClient.get('/notifications/me/unread-count')
+    // data: Long
+    return res.data?.data
 }
 
 // 내 알림 하나 읽음 처리
 export async function markMyNotificationRead(notificationId) {
-    const userId = await getCurrentUserId()
-
-    const res = await apiClient.patch(
-        `/users/${userId}/notifications/${notificationId}/read`,
-    )
+    const res = await apiClient.patch(`/notifications/me/${notificationId}/read`)
     return res.data
 }
 
 // 내 알림 모두 읽음 처리
 export async function markMyNotificationsReadAll() {
-    const userId = await getCurrentUserId()
-
-    const res = await apiClient.patch(`/users/${userId}/notifications/read-all`)
+    const res = await apiClient.patch('/notifications/me/read-all')
     return res.data
 }
 
 // 내 알림 하나 삭제
 export async function deleteMyNotification(notificationId) {
-    const userId = await getCurrentUserId()
-
-    const res = await apiClient.delete(
-        `/users/${userId}/notifications/${notificationId}`,
-    )
+    const res = await apiClient.delete(`/notifications/me/${notificationId}`)
     return res.data
 }
 
 // 읽은 알림 모두 삭제
 export async function deleteMyReadNotifications() {
-    const userId = await getCurrentUserId()
-
-    const res = await apiClient.delete(`/users/${userId}/notifications/read-all`)
-    return res.data
-}
-
-/* ===================== 푸시 설정 on/off ===================== */
-
-// 현재 내 push 설정 조회
-export async function fetchMyPushSetting() {
-    const res = await apiClient.get('/notifications/settings/push')
-    return res.data.data
-}
-
-// 내 push 설정 변경
-export async function updateMyPushSetting(notificationStatus) {
-    const userId = await getCurrentUserId()
-    const pushEnabled = notificationStatus === 'on'
-
-    const res = await apiClient.patch('/notifications/settings/push', {
-        memberId: userId,
-        pushEnabled,
-    })
-
+    const res = await apiClient.delete('/notifications/me/read')
     return res.data
 }

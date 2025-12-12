@@ -1,5 +1,23 @@
 <script setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { storeToRefs } from 'pinia'
+
 import NavigationBar from "@/components/NavigationBar.vue";
+import NotificationBell from "@/components/notification/NotificationBell.vue";
+import AlertIconSrc from '@/assets/icon/icon-headbar-alert.svg'
+
+import { useAuthStore } from '@/stores/AuthStore'
+
+const route = useRoute()
+const authStore = useAuthStore()
+const { isAuthenticated } = storeToRefs(authStore)   // authStore.isLoggedIn을 반응형으로 가져오기
+
+const showGlobalBell = computed(() => {
+  const hideNav = route.meta?.hideNav === true
+  return isAuthenticated.value && !hideNav
+})
+
 </script>
 
 <template>
@@ -9,6 +27,14 @@ import NavigationBar from "@/components/NavigationBar.vue";
 
     <!-- 라우터 화면 -->
     <router-view />
+
+    <!--  알림 종: 로그인 + 네비가 보이는 페이지에서만 -->
+    <div
+        class="global-notification-bell"
+        v-if="showGlobalBell"
+    >
+      <NotificationBell :icon-src="AlertIconSrc" />
+    </div>
   </div>
 </template>
 
@@ -28,4 +54,12 @@ body {
 .app-container {
   font-family: "Pretendard", sans-serif;
 }
+
+.global-notification-bell {
+  position: fixed;
+  top: 100px;
+  right: 40px;
+  z-index: 999;
+}
+
 </style>
