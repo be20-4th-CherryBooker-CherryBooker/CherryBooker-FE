@@ -84,7 +84,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/AuthStore'
 import { getMyProfileApi, updateNicknameApi } from '@/api/UserApi'
 import { logoutApi } from '@/api/AuthApi'
@@ -214,7 +215,7 @@ const handleLogout = async () => {
     authStore.clearAuthState()
 
     // 로그인 페이지로 강제 이동
-    router.push({ name: '/login' }) // 또는 path: '/login'
+    router.push({ name: 'login' }) // 또는 path: '/login'
   }
 }
 
