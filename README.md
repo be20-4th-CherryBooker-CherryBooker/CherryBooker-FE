@@ -126,7 +126,8 @@ OCR 기술을 통해 텍스트가 자동으로 추출·저장되며,
 ---
 
 ## 🛜 프로젝트 아키텍처
-<img width="3381" height="2393" alt="image" src="https://github.com/user-attachments/assets/21c6d556-51e6-44ec-bd43-70e8bea4873f" />
+<img width="770" height="600" alt="image" src="https://github.com/user-attachments/assets/11abac75-ddcf-47f7-9592-0802a5333db0" />
+
 
 
 
